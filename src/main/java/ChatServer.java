@@ -1,7 +1,4 @@
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -10,7 +7,7 @@ import java.util.List;
 import java.util.Scanner;
 
 public class ChatServer {
-    private static final List<Client> clients = new ArrayList<>();
+    private final List<Client> clients = new ArrayList<>();
     private final ServerSocket serverSocket;
 
     public ChatServer(int port) throws ServerException {
@@ -28,16 +25,9 @@ public class ChatServer {
         }
     }
 
-    public static void sendAll(String message) {
-        for (Client client :
-                clients) {
-            client.receive(message);
-        }
-    }
-
     public void serverStarter() throws ServerException {
+        System.out.println("Waiting...");
         while(true) {
-            System.out.println("Waiting...");
             try {
                 // waiting for a client from the network
                 Socket socket = serverSocket.accept();
@@ -60,51 +50,49 @@ public class ChatServer {
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            new ChatServer(1234).serverStarter();
-        } catch (ServerException e) {
-            System.out.println(e.getMessage());
-            System.out.println("The program is stopped");
-        }
-    }
+    private class Client implements Runnable {
 
-    private static class Client implements Runnable {
         Socket socket;
         Scanner in;
         PrintStream out;
-
         public Client(Socket socket){
             this.socket = socket;
-            // запускаем поток
+            // starting the stream
             new Thread(this).start();
         }
 
-        void receive(String message) {
+        private void receive(String message) {
             out.println(message);
         }
 
         public void run() {
             try {
-                // получаем потоки ввода и вывода
-                InputStream is = socket.getInputStream();
-                OutputStream os = socket.getOutputStream();
+                // get input and output streams
+                // creating input and output tools
+                in = new Scanner(socket.getInputStream());
+                out = new PrintStream(socket.getOutputStream());
 
-                // создаем удобные средства ввода и вывода
-                in = new Scanner(is);
-                out = new PrintStream(os);
-
-                // читаем из сети и пишем в сеть
+                // read from the network and write to the network
                 out.println("Welcome to chat!");
                 String input = in.nextLine();
                 while (!input.equals("bye")) {
-                    sendAll(input);
+                    for (Client client : clients) client.receive(input);
                     input = in.nextLine();
                 }
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+
+    }
+
+    public static void main(String[] args) {
+        try {
+            new ChatServer(1234).serverStarter();
+        } catch (ServerException e) {
+            System.out.println(e.getMessage());
+            System.out.println("The program is stopped");
         }
     }
 }
