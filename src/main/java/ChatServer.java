@@ -32,9 +32,10 @@ public class ChatServer {
                 // waiting for a client from the network
                 Socket socket = serverSocket.accept();
                 Client client = new Client(socket);
+                clients.add(client);
+                new Thread (client).start();
                 System.out.println("Client #" + client.hashCode() + " connected on " + socket);
                 // creating a client
-                clients.add(client);
             } catch (SocketTimeoutException e) {
                 throw new ServerException("Timeout was previously set with setSoTimeout and the " +
                         "timeout has been reached");
@@ -51,14 +52,11 @@ public class ChatServer {
     }
 
     private class Client implements Runnable {
+        private final Socket socket;
+        private PrintStream out;
 
-        Socket socket;
-        Scanner in;
-        PrintStream out;
         public Client(Socket socket){
             this.socket = socket;
-            // starting the stream
-            new Thread(this).start();
         }
 
         private void receive(String message) {
@@ -69,7 +67,7 @@ public class ChatServer {
             try {
                 // get input and output streams
                 // creating input and output tools
-                in = new Scanner(socket.getInputStream());
+                Scanner in = new Scanner(socket.getInputStream());
                 out = new PrintStream(socket.getOutputStream());
 
                 // read from the network and write to the network
@@ -84,7 +82,6 @@ public class ChatServer {
                 e.printStackTrace();
             }
         }
-
     }
 
     public static void main(String[] args) {
