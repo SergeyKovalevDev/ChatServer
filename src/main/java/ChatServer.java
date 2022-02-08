@@ -2,13 +2,11 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class ChatServer {
     private final ServerSocket serverSocket;
-    private final List<Client> clients = new ArrayList<>();
+    private final Map<Socket, Client> clientMap = new HashMap<>();
 
     public ChatServer(int port) throws ServerException {
         try {
@@ -26,15 +24,13 @@ public class ChatServer {
     }
 
     public void serverStarter() throws ServerException {
-        System.out.println("Waiting...");
         while(true) {
             try {
                 // waiting for a client from the network
                 Socket socket = serverSocket.accept();
-                // creating a client
-                Client client = new Client(socket);
-                clients.add(client);
-                System.out.println("Client #" + client.hashCode() + " connected on " + socket);
+                // adding new client into HashMap
+                clientMap.put(socket, new Client(socket));
+                System.out.println("The client with the hash code " + clientMap.get(socket) + " is connected to the " + socket);
             } catch (SocketTimeoutException e) {
                 throw new ServerException("Timeout was previously set with setSoTimeout and the " +
                         "timeout has been reached");
@@ -64,9 +60,11 @@ public class ChatServer {
         }
 
         private void sendToOtherClients(String message) {
-            for (Client client : clients) {
-                // simply for the experiment's sake
-                if (client != this) client.receive(message);
+            // sending message to all clients in HashMap except this
+            // simply for the experiment's sake
+            for (Map.Entry<Socket, Client> clientEntry : clientMap.entrySet()) {
+                Client c = clientEntry.getValue();
+                if (c != this) c.receive(message);
             }
         }
 
@@ -83,6 +81,9 @@ public class ChatServer {
                     sendToOtherClients(input);
                     input = in.nextLine();
                 }
+                // removing client from HashMap before closing socket
+                System.out.println("The client with the hash code " + clientMap.get(socket) + " is disconnected");
+                clientMap.remove(socket);
                 socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
