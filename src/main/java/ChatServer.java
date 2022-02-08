@@ -7,12 +7,12 @@ import java.util.List;
 import java.util.Scanner;
 
 public class ChatServer {
-    private final List<Client> clients = new ArrayList<>();
     private final ServerSocket serverSocket;
+    private final List<Client> clients = new ArrayList<>();
 
     public ChatServer(int port) throws ServerException {
         try {
-            // creating a server socket on port 1234
+            // creating a server socket
             serverSocket = new ServerSocket(port);
         } catch (IOException e) {
             throw new ServerException("I/O error occurs when opening the socket");
@@ -31,11 +31,10 @@ public class ChatServer {
             try {
                 // waiting for a client from the network
                 Socket socket = serverSocket.accept();
+                // creating a client
                 Client client = new Client(socket);
                 clients.add(client);
-                new Thread (client).start();
                 System.out.println("Client #" + client.hashCode() + " connected on " + socket);
-                // creating a client
             } catch (SocketTimeoutException e) {
                 throw new ServerException("Timeout was previously set with setSoTimeout and the " +
                         "timeout has been reached");
@@ -57,24 +56,31 @@ public class ChatServer {
 
         public Client(Socket socket){
             this.socket = socket;
+            new Thread(this).start();
         }
 
         private void receive(String message) {
             out.println(message);
         }
 
+        private void sendToOtherClients(String message) {
+            for (Client client : clients) {
+                // simply for the experiment's sake
+                if (client != this) client.receive(message);
+            }
+        }
+
+        @Override
         public void run() {
             try {
-                // get input and output streams
                 // creating input and output tools
                 Scanner in = new Scanner(socket.getInputStream());
                 out = new PrintStream(socket.getOutputStream());
-
                 // read from the network and write to the network
                 out.println("Welcome to chat!");
                 String input = in.nextLine();
                 while (!input.equals("bye")) {
-                    for (Client client : clients) client.receive(input);
+                    sendToOtherClients(input);
                     input = in.nextLine();
                 }
                 socket.close();
