@@ -8,10 +8,10 @@ public class ChatServer {
     private final List<Client> clients = new ArrayList<>();
     private final ServerSocket serverSocket;
 
-    public ChatServer() throws ServerException {
+    public ChatServer(int port) throws ServerException {
         try {
             // creating a server socket on port 1234
-            serverSocket = new ServerSocket(1234);
+            serverSocket = new ServerSocket(port);
         } catch (IOException e) {
             throw new ServerException("I/O error occurs when opening the socket");
         } catch (SecurityException e) {
@@ -47,7 +47,7 @@ public class ChatServer {
 
     public static void main(String[] args) {
         try {
-            new ChatServer().serverStarter();
+            new ChatServer(1234).serverStarter();
         } catch (ServerException e) {
             System.out.println(e.getMessage());
             System.out.println("The program is stopped");
